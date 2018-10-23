@@ -1,0 +1,14 @@
+#!/bin/bash
+# Run tests automatically whenever files change in the PROJECT_ROOT
+
+PROJECT_ROOT=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )
+TEST_RUNNER="$PROJECT_ROOT/autotest/growl-tests"
+
+# run tests once at startup
+"$TEST_RUNNER"
+
+# Run tests whenever anything under PROJECT_ROOT changes
+# Note that we explicitly exclude the log files, since they get
+# written as a result of running the tests.  If we didn't exclude
+# them, fswatch would retrigger continuously.
+fswatch --one-per-batch "$PROJECT_ROOT" --exclude logs --exclude '.*\.db' | xargs -n1 -I{} "$TEST_RUNNER"

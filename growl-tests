@@ -1,0 +1,48 @@
+#!/bin/bash
+# Run tests and display results in a "growl"-like window.
+
+PROJECT_ROOT=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )
+
+# TEST_RUNNER is the script that actually runs your tests
+TEST_RUNNER="$PROJECT_ROOT/autotest/run-tests"
+
+# Set up logging directories
+mkdir -p "$PROJECT_ROOT/logs"
+STDOUT_LOG="$PROJECT_ROOT/logs/unittest_stdout.log"
+STDERR_LOG="$PROJECT_ROOT/logs/unittest_stderr.log"
+
+# Run the tests, copy stdout and stderr to STDOUT_LOG and STDERR_LOG
+# respectively
+$TEST_RUNNER > >(tee "$STDOUT_LOG") 2> >(tee "$STDERR_LOG" >&2)
+
+# Capture the exit status of TEST_RUNNER.  We will use this for the
+# red / green distinction in our Growl display.
+TEST_STATUS=$?
+
+# The following lines are specific to the Python `unittest` output,
+# and aren't required for the red / green display.  We extract a few
+# extra bits of info so the Growl window can display something like:
+#     Ran 452 tests in 8.300s
+#     FAILED (failures=3)
+
+# extract "Ran n tests in n.nnns"
+TEST_SUMMARY=`tail -3 "$STDERR_LOG" | head -1`
+
+# extract "OK" or "FAILED (failures=n)"
+TEST_RESULT=`tail -1 "$STDERR_LOG"`
+
+# Compose the two strings to make the entire message
+GROWL_MESSAGE="$TEST_SUMMARY
+$TEST_RESULT"
+
+# Pick a sound and an icon based on TEST_STATUS
+if [ $TEST_STATUS -eq 0 ] ; then
+    GROWL_SOUND="Submarine"
+    GROWL_ICON="$PROJECT_ROOT/autotest/icons/GreenBead.png"
+else
+    GROWL_SOUND="Purr"
+    GROWL_ICON="$PROJECT_ROOT/autotest/icons/RedBead.png"
+fi
+
+# Now display the results in a Growl-like window
+echo "$GROWL_MESSAGE" | terminal-notifier -sound $GROWL_SOUND -contentImage $GROWL_ICON
